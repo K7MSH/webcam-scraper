@@ -7,9 +7,8 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"time"
-
-	"github.com/golang/glog"
 )
 
 type VersionInfo struct {
@@ -22,18 +21,18 @@ func (vi *VersionInfo) Save() {
 	filename := path.Join(vi.Directory, "version.json")
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		glog.Warningf("Failed to open version file: %s", err.Error())
+		httplogger.Warningf("Failed to open version file: %s", err.Error())
 		return
 	}
 	defer f.Close()
 	data, err := json.Marshal(vi)
 	if err != nil {
-		glog.Warningf("Failed to marshal version json file: %s", err.Error())
+		httplogger.Warningf("Failed to marshal version json file: %s", err.Error())
 		return
 	}
 	_, err = f.Write(data)
 	if err != nil {
-		glog.Warningf("Failed to write to version file: %s", err.Error())
+		httplogger.Warningf("Failed to write to version file: %s", err.Error())
 		return
 	}
 }
@@ -46,6 +45,9 @@ var HttpClient = &http.Client{
 }
 
 func ensureDir(path string) error {
+	if !strings.Contains("/", path) {
+		return nil
+	}
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		err = os.MkdirAll(path, os.ModePerm)
 		return err
@@ -72,34 +74,37 @@ func getImage(dir string, cam *Camera) error {
 		}
 	}
 	if auth != nil {
-		glog.Infoln("Found Auth, Not implemented, Bailing!")
+		httplogger.Warningf("[%s] Found Auth, Not implemented, Bailing!", cam.Name)
 		return nil
 
 	} else {
-		glog.Infof("[%s] Initiating request to %s", cam.Name, cam.URL)
+		httplogger.Tracef("[%s] Initiating request to %s", cam.Name, cam.URL)
 		response, err := HttpClient.Get(cam.URL)
-		glog.Infof("[%s] got image from %s", cam.Name, cam.URL)
+		httplogger.Tracef("[%s] got image from %s", cam.Name, cam.URL)
 		if err != nil {
 			return err
 		}
-		glog.Infof("[%s] Saving image from %s", cam.Name, cam.URL)
+		httplogger.Tracef("[%s] Saving image from %s", cam.Name, cam.URL)
 		fp, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			return err
 		}
 		defer fp.Close()
 		io.Copy(fp, response.Body)
+		response.Body.Close()
 		if cam.SaveTo != "" {
-			glog.Infof("[%s] Saving image to %s", cam.Name, cam.SaveTo)
+			httplogger.Tracef("[%s] Saving image to %s", cam.Name, cam.SaveTo)
 			fp2, err := os.OpenFile(cam.SaveTo, os.O_RDWR|os.O_CREATE, 0644)
 			if err != nil {
 				return err
 			}
 			defer fp2.Close()
-			io.Copy(fp2, response.Body)
+			fp.Seek(0, 0)
+			io.Copy(fp2, fp)
+			httplogger.Infof("[%s] Saved image to %s", cam.Name, cam.SaveTo)
 		}
 		version.Save()
-		glog.Infof("[%s] Saved image to %s", cam.Name, filename)
+		httplogger.Infof("[%s] Saved image to %s", cam.Name, filename)
 	}
 	return nil
 }
