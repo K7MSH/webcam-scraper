@@ -3,6 +3,7 @@ release:
   github:
     owner: K7MSH
     name: webcam-scraper
+  draft: true
 brew:
   install: bin.install "webcam-scraper"
 builds:
