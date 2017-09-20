@@ -1,0 +1,10 @@
+*.swp
+camera.py.bak
+config.json
+dist/
+goreleaser
+goreleaser_Linux_x86_64.tar.gz
+mkvid.sh
+playvid.sh
+run.sh
+save_dir/
