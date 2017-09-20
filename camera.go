@@ -5,6 +5,11 @@ import (
 	"io/ioutil"
 )
 
+type Config struct {
+	StoragePath string
+	Cameras     Cameras
+}
+
 type Camera struct {
 	Name   string
 	URL    string
@@ -19,7 +24,7 @@ type CameraAuth struct {
 
 type Cameras []*Camera
 
-func (c *Cameras) Decode(raw []byte) {
+func (c *Config) Decode(raw []byte) {
 	logger.Tracef("Parsing json response")
 	err := json.Unmarshal(raw, &c)
 	if err != nil {
@@ -27,7 +32,7 @@ func (c *Cameras) Decode(raw []byte) {
 	}
 }
 
-func (c *Cameras) Load(file string) {
+func (c *Config) Load(file string) {
 	raw, err := ioutil.ReadFile(file)
 	if err != nil {
 		logger.Criticalf("Failed to read file: %v", err)

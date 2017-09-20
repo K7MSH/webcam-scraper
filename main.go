@@ -54,16 +54,25 @@ func main() {
 	//	"http://10.33.130.118/snap.jpeg",
 	//}
 	logger.Tracef("Reading list of cameras from config file")
-	var cameras Cameras
-	cameras.Load("cameras.json")
+	var config Config
+	config.Load("cameras.json")
 	var wg sync.WaitGroup
 	logger.Tracef("Starting camera capture")
-	for _, c := range cameras {
+	if config.StoragePath != "" && config.StoragePath != "." && config.StoragePath != "./" {
+		if config.StoragePath[len(config.StoragePath)-1] != '/' {
+			logger.Tracef("Storage path lacking /, adding to %s", config.StoragePath)
+			config.StoragePath += "/"
+		}
+		if err = ensureDir(config.StoragePath); err != nil {
+			logger.Criticalf("Unable to ensure storage path, %v: %v", config.StoragePath, err)
+		}
+	}
+	for _, c := range config.Cameras {
 		wg.Add(1)
 		go func(c *Camera) {
 			logger.Tracef("Starting camera capture: %s", c.Name)
 			defer wg.Done()
-			err = getImage("./tmp/", c)
+			err = getImage(config.StoragePath, c)
 			if err != nil {
 				logger.Errorf("[%s] Unable to retrieve image: %s", c.Name, err.Error())
 			}

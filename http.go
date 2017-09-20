@@ -45,13 +45,17 @@ var HttpClient = &http.Client{
 }
 
 func ensureDir(path string) error {
-	if !strings.Contains("/", path) {
+	logger.Tracef("Ensuring dir '%s' exists", path)
+	if !strings.Contains(path, "/") {
+		logger.Tracef("Path doesn't contain a /, bailing")
 		return nil
 	}
 	if _, err := os.Stat(path); os.IsNotExist(err) {
+		logger.Tracef("Path doesn't exist. Attempting to create")
 		err = os.MkdirAll(path, os.ModePerm)
 		return err
 	}
+	logger.Tracef("Path exists already")
 	return nil
 }
 
