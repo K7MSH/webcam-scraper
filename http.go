@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -37,7 +38,19 @@ func (vi *VersionInfo) Save() {
 	}
 }
 
-func (vi *VersionInfo) Load() {
+func (vi *VersionInfo) Load(dir string) error {
+	filename := path.Join(dir, "version.json")
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		httplogger.Warningf("Failed to read version file: %s", err.Error())
+		return err
+	}
+	err = json.Unmarshal(data, vi)
+	if err != nil {
+		httplogger.Warningf("Failed to unmarshal version json file: %s", err.Error())
+		return err
+	}
+	return nil
 }
 
 var HttpClient = &http.Client{
