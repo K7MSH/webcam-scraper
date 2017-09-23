@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"sync"
 
 	"github.com/juju/loggo"
@@ -52,6 +53,18 @@ func main() {
 	logger.Tracef("Version: %s", version)
 	logger.Tracef("Build Date: %s", date)
 	var err error
+
+	cwd, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		rootLogger.Criticalf("%v", err.Error())
+		return
+	}
+	err = os.Chdir(cwd)
+	if err != nil {
+		rootLogger.Criticalf("%v", err.Error())
+		return
+	}
+
 	//c := &Camera{
 	//	"LakeMtn-North",
 	//	"http://10.33.130.118/snap.jpeg",
