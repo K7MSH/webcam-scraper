@@ -1,5 +1,5 @@
 # webcam-scraper
-![Travis CI Build Status](http://travis-ci.org/K7MSH/webcam-scraper.svg?branch=master)
+[![Build Status](https://travis-ci.org/K7MSH/webcam-scraper.svg?branch=master)](https://travis-ci.org/K7MSH/webcam-scraper)
 ---
 
 webcam-scraper is a utility program used for scraping webcam images off of a
