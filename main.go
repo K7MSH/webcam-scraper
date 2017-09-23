@@ -67,6 +67,9 @@ func main() {
 			logger.Criticalf("Unable to ensure storage path, %v: %v", config.StoragePath, err)
 		}
 	}
+	if err = ensureDir("failures/"); err != nil {
+		logger.Criticalf("Unable to ensure failure dir, failures: %v", err)
+	}
 	for _, c := range config.Cameras {
 		wg.Add(1)
 		go func(c *Camera) {
