@@ -3,7 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
+	"path"
 	"sync"
 
 	"github.com/juju/loggo"
@@ -78,6 +81,33 @@ func main() {
 			err = getImage(config.StoragePath, c)
 			if err != nil {
 				logger.Errorf("[%s] Unable to retrieve image: %s", c.Name, err.Error())
+				var v VersionInfo
+				v.Load(path.Join(config.StoragePath, c.Name))
+				filename := path.Join(v.Directory, v.Latest)
+				cmd := exec.Command("convert", filename, "-fill", "rgba(20,20,20,0.80)", "-draw", "rectangle 0,340 1920,740", "-fill", "white", "-strokewidth", "4", "-stroke", "black", "-gravity", "Center", "-weight", "800", "-pointsize", "90", "-annotate", "0", "K7MSH CAMERA\nTEMPORARILY OFFLINE", path.Join("failures", fmt.Sprintf("%s___%s", c.Name, v.Latest)))
+				err := cmd.Run()
+				if err != nil {
+					logger.Warningf("Failed to create debug offline file: %s", err.Error())
+					log, err := cmd.CombinedOutput()
+					rootLogger.Debugf("%s -- %v", err.Error(), log)
+					return
+				}
+				if err == nil && c.SaveTo != "" {
+					image, err := ioutil.ReadFile(path.Join("failures", fmt.Sprintf("%s___%s", c.Name, v.Latest)))
+					if err != nil {
+						logger.Warningf("Failed to read offline file: %s", err.Error())
+						return
+					}
+					httplogger.Tracef("[%s] Saving offline image to %s", c.Name, c.SaveTo)
+					fp2, err := os.OpenFile(c.SaveTo, os.O_RDWR|os.O_CREATE, 0644)
+					if err != nil {
+						logger.Warningf("Failed to create debug offline file: %s", err.Error())
+						return
+					}
+					defer fp2.Close()
+					fp2.Write(image)
+					httplogger.Infof("[%s] Saved offline image to %s", c.Name, c.SaveTo)
+				}
 			}
 		}(c)
 	}
