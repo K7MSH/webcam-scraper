@@ -78,7 +78,9 @@ func getImage(dir string, cam *Camera) error {
 	var auth *CameraAuth
 	auth = cam.Auth
 	filepath = path.Join(dir, cam.Name)
-	filename = fmt.Sprintf("%s.jpg", time.Now().Format(time.RFC3339))
+	// "%Y%m%d-%H%M%S"
+	format := "20060102-150405MST"
+	filename = fmt.Sprintf("%s.jpg", time.Now().Format(format))
 	var version *VersionInfo = &VersionInfo{filepath, cam.Name, filename}
 	filename = path.Join(filepath, filename)
 	if err := ensureDir(filepath); err != nil {
