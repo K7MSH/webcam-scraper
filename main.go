@@ -75,9 +75,9 @@ func main() {
 	var wg sync.WaitGroup
 	logger.Tracef("Starting camera capture")
 	if config.StoragePath != "" && config.StoragePath != "." && config.StoragePath != "./" {
-		if config.StoragePath[len(config.StoragePath)-1] != '/' {
-			logger.Tracef("Storage path lacking /, adding to %s", config.StoragePath)
-			config.StoragePath += "/"
+		if config.StoragePath[len(config.StoragePath)-1] != os.PathSeparator {
+			logger.Tracef("Storage path lacking %c, adding to %s", os.PathSeparator, config.StoragePath)
+			config.StoragePath += string(os.PathSeparator)
 		}
 		if err = ensureDir(config.StoragePath); err != nil {
 			logger.Criticalf("Unable to ensure storage path, %v: %v", config.StoragePath, err)

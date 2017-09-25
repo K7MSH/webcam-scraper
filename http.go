@@ -59,8 +59,8 @@ var HttpClient = &http.Client{
 
 func ensureDir(path string) error {
 	logger.Tracef("Ensuring dir '%s' exists", path)
-	if !strings.Contains(path, "/") {
-		logger.Tracef("Path doesn't contain a /, bailing")
+	if !strings.Contains(path, string(os.PathSeparator)) {
+		logger.Tracef("Path doesn't contain a %c, bailing", os.PathSeparator)
 		return nil
 	}
 	if _, err := os.Stat(path); os.IsNotExist(err) {
