@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/jpeg"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -31,7 +32,16 @@ type Cameras []*Camera
 var camlogger = loggo.GetLogger("main.camera")
 
 var HttpClient = &http.Client{
-//Timeout: time.Second * 60,
+	//Timeout: time.Second * 60,
+	Transport: &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout:   60 * time.Second,
+			KeepAlive: 60 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout:   60 * time.Second,
+		ResponseHeaderTimeout: 20 * time.Second,
+		ExpectContinueTimeout: 2 * time.Second,
+	},
 }
 
 func (cam *Camera) getFilename() string {
