@@ -71,7 +71,7 @@ func main() {
 	//}
 	logger.Tracef("Reading list of cameras from config file")
 	var config Config
-	config.Load("cameras.json")
+	config.LoadJson("cameras.json")
 	var wg sync.WaitGroup
 	logger.Tracef("Starting camera capture")
 	if config.StoragePath != "" && config.StoragePath != "." && config.StoragePath != "./" {
@@ -91,52 +91,47 @@ func main() {
 		go func(c *Camera) {
 			logger.Tracef("Starting camera capture: %s", c.Name)
 			defer wg.Done()
-			err = imageLoop(&config, c)
-			if err != nil {
-				logger.Warningf("Image retrieval failed, retrying 2 more times")
-				err = imageLoop(&config, c)
-				if err != nil {
-					logger.Warningf("Image retrieval failed, retrying 1 more time")
-					imageLoop(&config, c)
+			for i := 2; i >= 0; i-- {
+				err := c.GetImage(config.StoragePath)
+				if err == nil {
+					return
 				}
+				logger.Warningf("Image retrieval failed, retrying %d more times. Error: %v", i, err)
 			}
+			generateFailureImage(&config, c)
 		}(c)
 	}
 	wg.Wait()
 	logger.Tracef("Finished camera capture")
 }
 
-func imageLoop(config *Config, c *Camera) error {
-	err := getImage(config.StoragePath, c)
+func generateFailureImage(config *Config, c *Camera) error {
+	var v VersionInfo
+	v.Load(path.Join(config.StoragePath, c.Name))
+	filename := path.Join(v.Directory, v.Latest)
+	cmd := exec.Command("convert", filename, "-fill", "rgba(20,20,20,0.80)", "-draw", "rectangle 0,340 1920,740", "-fill", "white", "-strokewidth", "4", "-stroke", "black", "-gravity", "Center", "-weight", "800", "-pointsize", "90", "-annotate", "0", "K7MSH CAMERA\nTEMPORARILY OFFLINE", path.Join("failures", fmt.Sprintf("%s___%s", c.Name, v.Latest)))
+	err := cmd.Run()
 	if err != nil {
-		logger.Errorf("[%s] Unable to retrieve image: %s", c.Name, err.Error())
-		var v VersionInfo
-		v.Load(path.Join(config.StoragePath, c.Name))
-		filename := path.Join(v.Directory, v.Latest)
-		cmd := exec.Command("convert", filename, "-fill", "rgba(20,20,20,0.80)", "-draw", "rectangle 0,340 1920,740", "-fill", "white", "-strokewidth", "4", "-stroke", "black", "-gravity", "Center", "-weight", "800", "-pointsize", "90", "-annotate", "0", "K7MSH CAMERA\nTEMPORARILY OFFLINE", path.Join("failures", fmt.Sprintf("%s___%s", c.Name, v.Latest)))
-		err := cmd.Run()
+		logger.Warningf("Failed to create debug offline file: %s", err.Error())
+		log, err := cmd.CombinedOutput()
+		rootLogger.Debugf("%s -- %v", err.Error(), log)
+		return err
+	}
+	if err == nil && c.SaveTo != "" {
+		image, err := ioutil.ReadFile(path.Join("failures", fmt.Sprintf("%s___%s", c.Name, v.Latest)))
 		if err != nil {
-			logger.Warningf("Failed to create debug offline file: %s", err.Error())
-			log, err := cmd.CombinedOutput()
-			rootLogger.Debugf("%s -- %v", err.Error(), log)
+			logger.Warningf("Failed to read offline file: %s", err.Error())
 			return err
 		}
-		if err == nil && c.SaveTo != "" {
-			image, err := ioutil.ReadFile(path.Join("failures", fmt.Sprintf("%s___%s", c.Name, v.Latest)))
-			if err != nil {
-				logger.Warningf("Failed to read offline file: %s", err.Error())
-				return err
-			}
-			httplogger.Tracef("[%s] Saving offline image to %s", c.Name, c.SaveTo)
-			fp2, err := os.OpenFile(c.SaveTo, os.O_RDWR|os.O_CREATE, 0644)
-			if err != nil {
-				logger.Warningf("Failed to create debug offline file: %s", err.Error())
-				return err
-			}
-			defer fp2.Close()
-			fp2.Write(image)
-			httplogger.Infof("[%s] Saved offline image to %s", c.Name, c.SaveTo)
+		httplogger.Tracef("[%s] Saving offline image to %s", c.Name, c.SaveTo)
+		fp2, err := os.OpenFile(c.SaveTo, os.O_RDWR|os.O_CREATE, 0644)
+		if err != nil {
+			logger.Warningf("Failed to create debug offline file: %s", err.Error())
+			return err
 		}
+		defer fp2.Close()
+		fp2.Write(image)
+		httplogger.Infof("[%s] Saved offline image to %s", c.Name, c.SaveTo)
 	}
 	return nil
 }
