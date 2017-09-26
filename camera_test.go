@@ -16,7 +16,7 @@ var DummyConfig = []byte(`
 var c Config
 
 func TestDecodeConfigJson(t *testing.T) {
-	c.Decode(DummyConfig)
+	c.DecodeJson(DummyConfig)
 	if len(c.Cameras) != 1 {
 		t.Fatalf("expected 1 item, got %d", len(c.Cameras))
 	}
