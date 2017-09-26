@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"image/jpeg"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -109,8 +110,16 @@ func getImage(dir string, cam *Camera) error {
 			return err
 		}
 		defer fp.Close()
-		io.Copy(fp, response.Body)
+		_, err = io.Copy(fp, response.Body)
 		response.Body.Close()
+		if err != nil {
+			return err
+		}
+		fp.Seek(0, 0)
+		err = verifyImageIntegrity(fp)
+		if err != nil {
+			return err
+		}
 		if cam.SaveTo != "" {
 			httplogger.Tracef("[%s] Saving image to %s", cam.Name, cam.SaveTo)
 			fp2, err := os.OpenFile(cam.SaveTo, os.O_RDWR|os.O_CREATE, 0644)
@@ -124,6 +133,14 @@ func getImage(dir string, cam *Camera) error {
 		}
 		version.Save()
 		httplogger.Infof("[%s] Saved image to %s", cam.Name, filename)
+	}
+	return nil
+}
+
+func verifyImageIntegrity(file io.Reader) error {
+	_, err := jpeg.Decode(file)
+	if err != nil {
+		return err
 	}
 	return nil
 }
